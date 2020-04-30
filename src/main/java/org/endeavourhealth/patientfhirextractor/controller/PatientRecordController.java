@@ -1,8 +1,13 @@
 package org.endeavourhealth.patientfhirextractor.controller;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+import org.apache.commons.lang3.StringUtils;
 import org.endeavourhealth.patientfhirextractor.configuration.ExporterProperties;
+import org.endeavourhealth.patientfhirextractor.constants.AvailableResources;
 import org.endeavourhealth.patientfhirextractor.data.PatientEntity;
+import org.endeavourhealth.patientfhirextractor.data.ReferencesEntity;
 import org.endeavourhealth.patientfhirextractor.repository.PatientRepository;
 import org.endeavourhealth.patientfhirextractor.resource.MessageHeader;
 import org.endeavourhealth.patientfhirextractor.resource.Patient;
@@ -14,12 +19,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -46,32 +54,87 @@ public class PatientRecordController {
 
     public void getUserDetails() throws Exception {
         logger.info("Entering getUserDetails() method");
+        Map<Long,String> orgIdList = new HashMap<>();
+        Map<Long, PatientEntity> patientEntities = patientService.processPatients();
+        Long globalOrgId = StringUtils.isNotEmpty(exporterProperties.getOrganization()) ? Long.parseLong(exporterProperties.getOrganization()) : null;
+        if (CollectionUtils.isEmpty(patientEntities)) {
+            return;
+        }
 
-        List<PatientEntity> patientEntities = patientService.processPatients();
+        postOrganizationIfNeeded(globalOrgId);
         patient = new Patient();
         messageHeader = new MessageHeader();
-        Bundle bundle = null;
         FileWriter file = new FileWriter(exporterProperties.getOutputFHIR());
+
+        if(globalOrgId != null) {
+            String orgLocation = patientService.getLocationForResource(globalOrgId, AvailableResources.ORGANIZATION);
+            if (StringUtils.isEmpty(orgLocation)) {
+                logger.info("Organization location empty " + orgLocation);
+                return;
+            } else {
+                orgIdList.put(globalOrgId,orgLocation);
+            }
+        }
+
+        patientService.referenceEntry(new ReferencesEntity("Start","dum"));
         try {
-            for (PatientEntity patientItem : patientEntities) {
-                bundle = new Bundle();
+            for (Map.Entry<Long, PatientEntity> patientData : patientEntities.entrySet()) {
+                PatientEntity patientItem = patientData.getValue();
+                String patientOrgId = patientItem.getOrglocation();
+               if(orgIdList.get(patientOrgId) == null) {
+                   postOrganizationIfNeeded(Long.parseLong(patientData.getValue().getOrglocation()));
+               }
+
+                String patientLocation = patientService.getLocationForResource(patientItem.getId(), AvailableResources.PATIENT);
+
+                Bundle bundle = new Bundle();
                 bundle.setType(Bundle.BundleType.MESSAGE);
 
                 bundle.addEntry().setResource(messageHeader.getMessageHeader());
-                org.hl7.fhir.dstu3.model.Patient patientResource = patient.getPatientResource(patientItem);
+                org.hl7.fhir.dstu3.model.Patient patientResource = patient.getPatientResource(patientItem, patientLocation, patientService);
                 bundle.addEntry().setResource(patientResource);
 
-                //TODO : POST or PUT API will be fired but now its written to a file for testing purpose.
+                //Testing
+              /*  // Log the request
+
+                System.out.println(ctx.newJsonParser().setPrettyPrint(true).encodeResourceToString(patientResource));
+
+                // Create a client and post the transaction to the server
+                IGenericClient client = ctx.newRestfulGenericClient("http://hapi.fhir.org/baseDstu3");
+                MethodOutcome resp = client.create().resource(patientResource).execute();
+                // Log the response
+                System.out.println(resp.getCreated());*/
+                if (StringUtils.isEmpty(patientLocation)) {
+                    //TODO: POST
+                } else {
+                    //TODO: PUT
+                }
+
                 FhirContext ctx = FhirContext.forDstu3();
                 String json = ctx.newJsonParser().setPrettyPrint(true).encodeResourceToString(bundle);
                 file.write(json);
             }
             file.flush();
+            patientService.referenceEntry(new ReferencesEntity("End","dum"));
+            logger.info("End of getUserDetails() method");
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             file.close();
         }
+    }
+
+    public void postOrganizationIfNeeded(Long organizationId){
+        logger.info("Entering postOrganizationIfNeeded() method");
+
+        if (organizationId == null) return;
+        boolean organizationExist = patientService.resourceExist(organizationId, AvailableResources.ORGANIZATION);
+
+        if(!organizationExist) {
+            //TODO: POST organizaton
+        }
+        //TODO: Add newly organization to reference table
+        logger.info("End of postOrganizationIfNeeded() method");
     }
 
     public void postBundle(Bundle bundle)

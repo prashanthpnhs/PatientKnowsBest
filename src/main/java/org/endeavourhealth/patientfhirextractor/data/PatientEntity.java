@@ -6,19 +6,14 @@ import lombok.NoArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.Table;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Data
-@Table(name = "patient", schema = "subscriber_pi")
 public class PatientEntity {
 
     private static final Logger LOG = LoggerFactory.getLogger(PatientEntity.class);

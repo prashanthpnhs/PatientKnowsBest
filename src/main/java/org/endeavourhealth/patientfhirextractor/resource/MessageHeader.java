@@ -2,7 +2,6 @@ package org.endeavourhealth.patientfhirextractor.resource;
 
 import org.endeavourhealth.patientfhirextractor.constants.ResourceConstants;
 import org.hl7.fhir.dstu3.model.Coding;
-import org.hl7.fhir.dstu3.model.Extension;
 import org.hl7.fhir.dstu3.model.UriType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

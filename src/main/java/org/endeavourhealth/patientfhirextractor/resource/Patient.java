@@ -1,11 +1,13 @@
 package org.endeavourhealth.patientfhirextractor.resource;
 
+import org.apache.commons.lang3.StringUtils;
 import org.endeavourhealth.patientfhirextractor.constants.ResourceConstants;
-import org.endeavourhealth.patientfhirextractor.controller.PatientRecordController;
 import org.endeavourhealth.patientfhirextractor.data.PatientEntity;
+import org.endeavourhealth.patientfhirextractor.service.PatientService;
 import org.hl7.fhir.dstu3.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,12 +15,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-public class Patient implements ResourceConstants{
+@Component
+public class Patient implements ResourceConstants {
     Logger logger = LoggerFactory.getLogger(Patient.class);
 
-    public org.hl7.fhir.dstu3.model.Patient getPatientResource(PatientEntity patientResult) throws Exception {
+    PatientService patientService;
+
+    public org.hl7.fhir.dstu3.model.Patient getPatientResource(PatientEntity patientResult, String patientLocation, PatientService patientService) throws Exception {
         logger.info("Entering getPatientResource() method");
 
+        this.patientService = patientService;
         String ods_code = replaceNull(patientResult.getCode());
         String nhsNumber = replaceNull(patientResult.getNhsNumber());
         String gender = replaceNull(patientResult.getGender());
@@ -37,7 +43,7 @@ public class Patient implements ResourceConstants{
 
         org.hl7.fhir.dstu3.model.Patient patient = new org.hl7.fhir.dstu3.model.Patient();
 
-        patient.setId(UUID.randomUUID().toString());
+        patient.setId(StringUtils.isNotEmpty(patientLocation) ? patientLocation : UUID.randomUUID().toString());
 
         Meta meta = new Meta();
         Coding coding = new Coding();
@@ -66,7 +72,7 @@ public class Patient implements ResourceConstants{
                 .setUse(HumanName.NameUse.OFFICIAL);
 
         // contact_type`contact_use`contact_value|
-        if (telecom.length()>0) {
+        if (telecom.length() > 0) {
             String[] ss = telecom.split("\\|");
             String z = "";
             for (int i = 0; i < ss.length; i++) {
@@ -86,7 +92,7 @@ public class Patient implements ResourceConstants{
             }
         }
 
-        switch(gender) {
+        switch (gender) {
             case "Other":
                 patient.setGender(Enumerations.AdministrativeGender.OTHER);
                 break;
@@ -111,9 +117,15 @@ public class Patient implements ResourceConstants{
         //TODO: Country, State information is needed but not available
         Address address = new Address();
 
-        if (adduse.equals("HOME")) {address.setUse(Address.AddressUse.HOME);}
-        if (adduse.equals("TEMP")) {address.setUse(Address.AddressUse.TEMP);}
-        if (adduse.equals("OLD")) {address.setUse(Address.AddressUse.OLD);}
+        if (adduse.equals("HOME")) {
+            address.setUse(Address.AddressUse.HOME);
+        }
+        if (adduse.equals("TEMP")) {
+            address.setUse(Address.AddressUse.TEMP);
+        }
+        if (adduse.equals("OLD")) {
+            address.setUse(Address.AddressUse.OLD);
+        }
 
         address.addLine(add1);
         address.addLine(add2);
@@ -124,6 +136,7 @@ public class Patient implements ResourceConstants{
 
         patient.addAddress(address);
 
+        patient.setActive(patientService.isPatientActive(patientResult.getId()));
         logger.info("End of getPatientResource() method");
         return patient;
     }
