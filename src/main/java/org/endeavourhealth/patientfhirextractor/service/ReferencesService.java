@@ -5,21 +5,18 @@ import org.endeavourhealth.patientfhirextractor.data.ReferencesEntity;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
-import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
 import java.util.Calendar;
 
-@Component
+@Service
 public class ReferencesService {
     Logger logger = LoggerFactory.getLogger(ReferencesService.class);
+
 
     @Autowired
     private ExporterProperties exporterProperties;
@@ -44,6 +41,7 @@ public class ReferencesService {
                     .setParameter(10, exporterProperties.getRunguid())
                     .executeUpdate();
             transaction.commit();
+            session.close();
         } catch (Exception e) {
             logger.error("Problem while inserting to reference table for anid " + referencesEntity.getAn_id());
             return false;

@@ -12,7 +12,7 @@ import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component("patientService")
+@Service
 public class PatientService {
     Logger logger = LoggerFactory.getLogger(PatientService.class);
 
@@ -147,19 +147,20 @@ public class PatientService {
     }
 
     public boolean resourceExist(Long id, AvailableResources resourceName) {
+        Session session = null;
         try {
             String sql = "SELECT * FROM " + exporterProperties.getDbreferences() + ".references WHERE an_id=:id AND resource=:resource";
-            Session session = entityManagerFactory.unwrap(SessionFactory.class).openSession();
-            ReferencesEntity referencesEntity = null;
+            session = entityManagerFactory.unwrap(SessionFactory.class).openSession();
             Query q = session.createSQLQuery(sql).addEntity(ReferencesEntity.class);
             q.setParameter("id", id);
             q.setParameter("resource", resourceName.toString());
             q.getSingleResult();
-
             return true;
         } catch (NoResultException e) {
             System.out.println(e.getMessage());
             return false;
+        } finally {
+            session.close();
         }
     }
 
@@ -192,7 +193,7 @@ public class PatientService {
             Query q = session.createSQLQuery(sql);
             q.setParameter("id", patientId);
             q.getSingleResult();
-
+            session.close();
             return true;
         } catch (NoResultException e) {
             System.out.println(e.getMessage());
