@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.endeavourhealth.common:utility:1.69-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/endeavourhealth/common/utility/1.69-SNAPSHOT/utility-1.69-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/endeavourhealth/common/utility/1.69-SNAPSHOT/utility-1.69-SNAPSHOT-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/endeavourhealth/common/utility/1.69-SNAPSHOT/utility-1.69-SNAPSHOT-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
